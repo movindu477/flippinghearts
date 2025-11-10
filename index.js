@@ -75,7 +75,11 @@ const gameState = {
     heartCardsFlipped: 0,
     currentHeartChallenge: null,
     gameWon: false,
-    heartAnswer: null
+    heartAnswer: null,
+    currentScore: 0,
+    heartsFound: 0,
+    timeBonus: 0,
+    savedGameState: null // To save game state when going to bonus challenge
 };
 
 // ---------------- CARD TYPES ----------------
@@ -123,6 +127,7 @@ function initializeGame() {
     setTimeout(() => showScreen('login'), 3000);
     document.getElementById('loginForm').addEventListener('submit', handleLogin);
     document.getElementById('playAgain').addEventListener('click', resetGame);
+    document.getElementById('playAgainGameOver').addEventListener('click', resetGame);
     
     // Add event listeners for bonus screen buttons
     document.getElementById('backToGame').addEventListener('click', backToGame);
@@ -209,7 +214,11 @@ function initializeGameBoard() {
         heartCards: [],
         heartCardsFlipped: 0,
         gameWon: false,
-        heartAnswer: null
+        heartAnswer: null,
+        moves: 0,
+        heartsFound: 0,
+        timeBonus: 0,
+        savedGameState: null
     });
 
     updateUI();
@@ -278,6 +287,7 @@ function flipCard(card) {
             gameState.cards.forEach(c => c.classList.remove('flipped'));
             gameState.flippedCards = [];
             gameState.heartCardsFlipped = 0;
+            gameState.heartsFound = 0;
             updateUI();
             setTimeout(() => updateCharacterMessage('carrot', "Don't find me! 🥕"), 2000);
         }, 800);
@@ -286,6 +296,7 @@ function flipCard(card) {
 
     if (type === 'heart') {
         gameState.heartCardsFlipped++;
+        gameState.heartsFound++;
         setTimeout(() => {
             checkVictory();
         }, 100);
@@ -303,8 +314,14 @@ function flipCard(card) {
             setTimeout(() => {
                 first.classList.remove('flipped');
                 second.classList.remove('flipped');
-                if (first.dataset.value === 'heart') gameState.heartCardsFlipped--;
-                if (second.dataset.value === 'heart') gameState.heartCardsFlipped--;
+                if (first.dataset.value === 'heart') {
+                    gameState.heartCardsFlipped--;
+                    gameState.heartsFound--;
+                }
+                if (second.dataset.value === 'heart') {
+                    gameState.heartCardsFlipped--;
+                    gameState.heartsFound--;
+                }
                 gameState.flippedCards = [];
                 updateUI();
             }, 1000);
@@ -361,6 +378,13 @@ function resetTimer() {
     updateUI();
 }
 
+function addExtraTime(seconds) {
+    gameState.timeLeft += seconds;
+    updateUI();
+    updateStatusMessage(`+${seconds} seconds bonus time! ⏰`);
+    updateCharacterMessage('cartoon', `Great! You got ${seconds} extra seconds!`);
+}
+
 function updateUI() {
     document.getElementById('matchesValue').textContent = `${gameState.heartCardsFlipped}/${gameState.heartCards.length}`;
     document.getElementById('movesValue').textContent = gameState.moves;
@@ -384,12 +408,42 @@ function checkVictory() {
     }
 }
 
+// ---------------- SCORE CALCULATION ----------------
+function calculateScore() {
+    // Base points for hearts found
+    const heartPoints = gameState.heartsFound * 50;
+    
+    // Time bonus (more time left = more points)
+    const timeBonus = Math.floor(gameState.timeLeft * 2);
+    
+    // Efficiency bonus (less moves = more points)
+    const efficiencyBonus = Math.max(0, 100 - gameState.moves * 2);
+    
+    // Perfect game bonus (all hearts found)
+    const perfectBonus = gameState.heartCardsFlipped === gameState.heartCards.length ? 200 : 0;
+    
+    const totalScore = heartPoints + timeBonus + efficiencyBonus + perfectBonus;
+    
+    return {
+        totalScore,
+        heartPoints,
+        timeBonus,
+        efficiencyBonus,
+        perfectBonus
+    };
+}
+
 // ---------------- WIN / GAME OVER ----------------
 function gameWon() {
     clearInterval(gameState.timer);
     gameState.apiCompleted = true;
     gameState.gameStarted = false;
     gameState.gameWon = true;
+    
+    // Calculate final score
+    const scoreData = calculateScore();
+    gameState.currentScore = scoreData.totalScore;
+    gameState.timeBonus = scoreData.timeBonus;
     
     updateStatusMessage('Victory! 🎉');
     updateCharacterMessage('cartoon', "You did it! All hearts found! 🎉");
@@ -403,7 +457,22 @@ function gameWon() {
         });
     }, 500);
     
-    // Show victory popup - NO BONUS CHALLENGE FOR WINNERS
+    // Update victory popup with score details
+    document.getElementById('finalScoreVictory').textContent = scoreData.totalScore;
+    document.getElementById('heartsFoundVictory').textContent = gameState.heartsFound;
+    document.getElementById('timeBonusVictory').textContent = scoreData.timeBonus;
+    document.getElementById('movesVictory').textContent = gameState.moves;
+    document.getElementById('totalScoreVictory').textContent = scoreData.totalScore;
+    
+    // Update score in database
+    updateScoreInDatabase(scoreData.totalScore, {
+        heartsFound: gameState.heartsFound,
+        timeBonus: scoreData.timeBonus,
+        moves: gameState.moves,
+        gameType: 'victory'
+    });
+    
+    // Show victory popup
     setTimeout(() => {
         document.getElementById('victoryPopup').classList.add('active');
     }, 1000);
@@ -416,29 +485,59 @@ function gameOver() {
     const allHeartsFlipped = gameState.heartCardsFlipped === gameState.heartCards.length;
     
     if (!allHeartsFlipped && !gameState.apiCompleted) {
+        // Save current game state before showing bonus challenge
+        gameState.savedGameState = {
+            cards: [...gameState.cards],
+            flippedCards: [...gameState.flippedCards],
+            heartCardsFlipped: gameState.heartCardsFlipped,
+            heartsFound: gameState.heartsFound,
+            moves: gameState.moves,
+            heartCards: [...gameState.heartCards]
+        };
+        
         updateStatusMessage('Time\'s Up! Better luck next time! ⏰');
-        updateCharacterMessage('cartoon', "Oh no! Time's up! Try again!");
+        updateCharacterMessage('cartoon', "Oh no! Time's up! Try the bonus challenge!");
         updateCharacterMessage('carrot', "Haha! You lost! 🥕");
         
-        // Show bonus challenge for players who didn't find all hearts
+        // Show bonus challenge instead of game over popup
         setTimeout(() => {
             showBonusChallenge();
         }, 1500);
     } else if (allHeartsFlipped) {
         // Player won but time ran out - still show victory
         gameWon();
-    } else {
-        updateStatusMessage("Time's Up! ⏰");
-        setTimeout(() => {
-            showBonusChallenge();
-        }, 1500);
     }
+}
+
+// ---------------- UPDATE SCORE IN DATABASE ----------------
+function updateScoreInDatabase(finalScore, gameData) {
+    fetch('update_score.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            score: finalScore,
+            gameData: gameData
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Score updated successfully in database');
+            // Update the displayed score
+            document.getElementById('currentScore').textContent = data.newScore;
+        } else {
+            console.error('Failed to update score:', data.message);
+        }
+    })
+    .catch(error => console.error('Error updating score:', error));
 }
 
 // ---------------- BONUS CHALLENGE FUNCTIONS ----------------
 function showBonusChallenge() {
     showScreen('bonus');
-    loadHeartChallenge(); // Fixed: Call the actual function instead of undefined Challenge()
+    loadHeartChallenge();
 }
 
 function loadHeartChallenge() {
@@ -457,7 +556,7 @@ function loadHeartChallenge() {
         .then(data => {
             console.log('Heart challenge data received:', data);
             gameState.currentHeartChallenge = data;
-            gameState.heartAnswer = data.solution; // Store the correct answer from API
+            gameState.heartAnswer = data.solution;
             displayHeartChallenge(data);
         })
         .catch(error => {
@@ -478,7 +577,8 @@ function displayHeartChallenge(data) {
     if (data.question) {
         heartChallenge.innerHTML = `
             <div class="challenge-content">
-                <h3>Heart Counting Challenge!</h3>
+                <h3>Bonus Time Challenge! ⏰</h3>
+                <p class="challenge-description">Count the hearts correctly to earn extra time and continue your game!</p>
                 <img src="${data.question}" alt="Heart Challenge" class="heart-image" onload="console.log('Image loaded successfully')" onerror="console.log('Image failed to load')">
                 <p class="challenge-hint">How many hearts do you see in the image above? Enter the number below!</p>
                 <div class="answer-input-container">
@@ -489,7 +589,6 @@ function displayHeartChallenge(data) {
             </div>
         `;
         
-        // Add event listeners after elements are created
         setTimeout(() => {
             const submitBtn = document.getElementById('submitAnswerBtn');
             const answerInput = document.getElementById('heartAnswerInput');
@@ -502,7 +601,6 @@ function displayHeartChallenge(data) {
                     }
                 });
                 
-                // Focus on input field
                 answerInput.focus();
             }
         }, 100);
@@ -530,18 +628,25 @@ function submitAnswer() {
     const correctAnswer = gameState.heartAnswer;
     
     if (userAnswerNum === correctAnswer) {
-        feedback.innerHTML = '🎉 <strong>Correct!</strong> Well done! You counted the hearts perfectly! 🎉';
+        feedback.innerHTML = '🎉 <strong>Correct!</strong> Well done! You earned 30 seconds bonus time! 🎉';
         feedback.className = 'answer-feedback success';
         
-        // Show celebration effects
+        // Add bonus points for correct answer
+        const bonusPoints = 100;
+        updateScoreInDatabase(bonusPoints, {
+            heartsFound: 0,
+            timeBonus: 0,
+            moves: 0,
+            gameType: 'bonus_challenge'
+        });
+        
         showCelebration();
         
-        // Show success message for 4 seconds then auto-redirect to game
+        // Return to game with extra time after 3 seconds
         setTimeout(() => {
-            backToGame();
-        }, 4000);
+            resumeGameWithExtraTime(30); // 30 seconds extra time
+        }, 3000);
     } else {
-        // Give hint based on whether guess is too high or low
         let hint = '';
         if (userAnswerNum < correctAnswer) {
             hint = ' (Too low! Try a higher number)';
@@ -552,7 +657,6 @@ function submitAnswer() {
         feedback.innerHTML = `❌ <strong>Incorrect!</strong> ${userAnswer} is not the right number of hearts.${hint}`;
         feedback.className = 'answer-feedback error';
         
-        // Shake animation for wrong answer
         const input = document.getElementById('heartAnswerInput');
         input.style.animation = 'shake 0.5s';
         setTimeout(() => {
@@ -561,6 +665,23 @@ function submitAnswer() {
             input.select();
         }, 500);
     }
+}
+
+function resumeGameWithExtraTime(extraSeconds) {
+    showScreen('game');
+    
+    // Add extra time to the timer
+    addExtraTime(extraSeconds);
+    
+    // Restart the timer if it was stopped
+    if (!gameState.gameStarted) {
+        gameState.gameStarted = true;
+        startTimer();
+    }
+    
+    updateStatusMessage(`Bonus! +${extraSeconds} seconds! Continue playing!`);
+    updateCharacterMessage('cartoon', "Great! You got extra time! Find more hearts! ❤️");
+    updateCharacterMessage('carrot', "Oh no! You got more time! 🥕");
 }
 
 function showCelebration() {
@@ -581,16 +702,25 @@ function showCelebration() {
     `;
     challengeContent.appendChild(confetti);
     
-    // Remove confetti after animation
     setTimeout(() => {
         confetti.remove();
     }, 3000);
 }
 
 function backToGame() {
-    // Return to game screen and reset the game
-    showScreen('game');
-    resetGame();
+    // If user goes back without solving, resume game without extra time
+    if (gameState.savedGameState) {
+        showScreen('game');
+        // Just resume the game as it was (no extra time)
+        if (!gameState.gameStarted) {
+            gameState.gameStarted = true;
+            startTimer();
+        }
+        updateStatusMessage('Game Resumed! Find more hearts! ❤️');
+    } else {
+        showScreen('game');
+        resetGame();
+    }
 }
 
 // ---------------- RESET GAME ----------------
@@ -601,6 +731,7 @@ function resetGame() {
     }
     
     document.getElementById('victoryPopup').classList.remove('active');
+    document.getElementById('gameOverPopup').classList.remove('active');
     initializeGameBoard();
     startGame();
 }
@@ -628,6 +759,12 @@ style.textContent = `
   100% { transform: translateY(500px) rotate(360deg); opacity: 0; }
 }
 
+@keyframes timeBonus {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 #gameBoard {
   transition: transform .6s ease, opacity .6s ease;
   transform-style: preserve-3d;
@@ -642,6 +779,13 @@ style.textContent = `
     color: #333;
     margin-bottom: 1rem;
     font-size: 1.3rem;
+}
+
+.challenge-description {
+    color: #666;
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+    font-weight: 500;
 }
 
 .challenge-hint {
@@ -769,6 +913,22 @@ style.textContent = `
     font-size: 1.2rem;
     color: #ff6b6b;
     padding: 2rem;
+}
+
+.time-bonus-notification {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    padding: 20px 30px;
+    border-radius: 15px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    z-index: 1000;
+    animation: timeBonus 2s ease-in-out;
+    box-shadow: 0 10px 30px rgba(76, 175, 80, 0.4);
 }
 
 /* Additional styles for better layout */

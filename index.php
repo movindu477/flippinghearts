@@ -146,15 +146,95 @@ $is_first_visit = !isset($_POST['login']) && !isset($_GET['registered']);
             display: flex;
         }
 
-        /* Score display in game header */
+        /* Modern Score Display */
         .score-display {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 8px 16px;
-            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(255, 107, 157, 0.9), rgba(255, 143, 171, 0.9));
+            padding: 12px 20px;
+            border-radius: 15px;
             color: white;
-            font-weight: 600;
+            font-weight: 700;
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 25px rgba(255, 107, 157, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+
+        .score-display:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(255, 107, 157, 0.4);
+        }
+
+        .score-icon {
+            font-size: 1.3rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        /* Score Popup Styles */
+        .score-popup {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin: 15px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .score-popup h4 {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            color: white;
+        }
+
+        .final-score {
+            font-size: 2.5rem;
+            font-weight: 900;
+            background: linear-gradient(45deg, #ff6b9d, #ff8fab);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 10px 0;
+        }
+
+        .score-breakdown {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .score-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .score-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .score-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #ff6b9d;
         }
     </style>
 </head>
@@ -178,8 +258,11 @@ $is_first_visit = !isset($_POST['login']) && !isset($_GET['registered']);
                         <div class="logo">❤️</div>
                         <div class="game-title-small">Flipping Hearts</div>
                         <div class="welcome-message" id="welcomeMessage">Welcome,
-                            <?php echo htmlspecialchars($_SESSION['username']); ?>!</div>
-                        <div class="score-display">Score: <span id="currentScore"><?php echo $_SESSION['score']; ?></span>
+                            <?php echo htmlspecialchars($_SESSION['username']); ?>!
+                        </div>
+                        <div class="score-display">
+                            <span class="score-icon">🏆</span>
+                            Score: <span id="currentScore"><?php echo $_SESSION['score']; ?></span>
                         </div>
                     </div>
                     <div class="header-right">
@@ -267,7 +350,28 @@ $is_first_visit = !isset($_POST['login']) && !isset($_GET['registered']);
                 <div class="popup-icon">🎉</div>
                 <h3>Victory!</h3>
                 <p>Congratulations! You found all the hearts!</p>
-                <div class="score-earned">You earned <span id="finalScore">100</span> points!</div>
+                <div class="score-popup">
+                    <h4>Game Results</h4>
+                    <div class="final-score" id="finalScoreVictory">0</div>
+                    <div class="score-breakdown">
+                        <div class="score-item">
+                            <div class="score-label">Hearts Found</div>
+                            <div class="score-value" id="heartsFoundVictory">0</div>
+                        </div>
+                        <div class="score-item">
+                            <div class="score-label">Time Bonus</div>
+                            <div class="score-value" id="timeBonusVictory">0</div>
+                        </div>
+                        <div class="score-item">
+                            <div class="score-label">Moves</div>
+                            <div class="score-value" id="movesVictory">0</div>
+                        </div>
+                        <div class="score-item">
+                            <div class="score-label">Total Score</div>
+                            <div class="score-value" id="totalScoreVictory">0</div>
+                        </div>
+                    </div>
+                </div>
                 <div class="popup-buttons">
                     <button id="playAgain" class="popup-btn confirm-btn">Play Again</button>
                     <a href="index.php?logout=1" class="popup-btn logout-btn">Logout</a>
@@ -275,16 +379,52 @@ $is_first_visit = !isset($_POST['login']) && !isset($_GET['registered']);
             </div>
         </div>
 
+        <!-- Game Over Popup -->
+        <div id="gameOverPopup" class="popup-screen">
+            <div class="popup-content">
+                <div class="popup-icon">⏰</div>
+                <h3>Time's Up!</h3>
+                <p>Better luck next time!</p>
+                <div class="score-popup">
+                    <h4>Game Results</h4>
+                    <div class="final-score" id="finalScoreGameOver">0</div>
+                    <div class="score-breakdown">
+                        <div class="score-item">
+                            <div class="score-label">Hearts Found</div>
+                            <div class="score-value" id="heartsFoundGameOver">0</div>
+                        </div>
+                        <div class="score-item">
+                            <div class="score-label">Time Bonus</div>
+                            <div class="score-value" id="timeBonusGameOver">0</div>
+                        </div>
+                        <div class="score-item">
+                            <div class="score-label">Moves</div>
+                            <div class="score-value" id="movesGameOver">0</div>
+                        </div>
+                        <div class="score-item">
+                            <div class="score-label">Total Score</div>
+                            <div class="score-value" id="totalScoreGameOver">0</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="popup-buttons">
+                    <button id="playAgainGameOver" class="popup-btn confirm-btn">Play Again</button>
+                    <a href="index.php?logout=1" class="popup-btn logout-btn">Logout</a>
+                </div>
+            </div>
+        </div>
+
         <!-- Heart API Bonus Screen -->
+        <!-- In the bonus screen section, update the header text -->
         <div id="bonusScreen" class="screen">
             <div class="bonus-container">
                 <div class="bonus-header">
-                    <h2>🎁 Heart Counting Challenge! 🎁</h2>
-                    <p>Count the hearts in the image for a bonus round!</p>
+                    <h2>⏰ Bonus Time Challenge! ⏰</h2>
+                    <p>Count the hearts correctly to earn extra time and continue your game!</p>
                 </div>
                 <div class="api-content">
                     <div id="heartChallenge">
-                        <div class="loading-heart">Loading heart challenge... ❤️</div>
+                        <div class="loading-heart">Loading bonus challenge... ❤️</div>
                     </div>
                     <div class="bonus-buttons">
                         <button id="backToGame" class="bonus-btn back-btn">← Back to Game</button>
@@ -378,8 +518,8 @@ $is_first_visit = !isset($_POST['login']) && !isset($_GET['registered']);
         <div id="successMessage" class="success-popup">
             <div class="success-content">
                 <div class="success-icon">✓</div>
-                <h3>Login Successful!</h3>
-                <p>Welcome to Flipping Hearts!</p>
+                <h3>Login Successful!</hh3>
+                    <p>Welcome to Flipping Hearts!</p>
             </div>
         </div>
     <?php endif; ?>
@@ -416,19 +556,26 @@ $is_first_visit = !isset($_POST['login']) && !isset($_GET['registered']);
             <?php endif; ?>
         });
 
-        // Function to update score in database
-        function updateScore(newScore) {
+        // Function to update score in database (called when game ends)
+        function updateScoreInDatabase(finalScore, gameData) {
             fetch('update_score.php', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Content-Type': 'application/json',
                 },
-                body: 'score=' + newScore
+                body: JSON.stringify({
+                    score: finalScore,
+                    gameData: gameData
+                })
             })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        document.getElementById('currentScore').textContent = newScore;
+                        console.log('Score updated successfully in database');
+                        // Update the displayed score
+                        document.getElementById('currentScore').textContent = data.newScore;
+                    } else {
+                        console.error('Failed to update score:', data.message);
                     }
                 })
                 .catch(error => console.error('Error updating score:', error));
