@@ -44,7 +44,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $row = sqlsrv_fetch_array($get_stmt, SQLSRV_FETCH_ASSOC);
                 $current_score = $row['score'];
 
-                // Add new score to current score
+                // Add new score to current score (accumulate total score)
                 $new_score = $current_score + $score;
 
                 // Update user's score
@@ -57,14 +57,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                     // Log game result if game data is provided
                     if ($gameData) {
-                        $log_sql = "INSERT INTO GameResults (user_id, score_earned, hearts_found, time_bonus, total_moves, game_date) 
-                                   VALUES (?, ?, ?, ?, ?, GETDATE())";
+                        $log_sql = "INSERT INTO GameResults (user_id, score_earned, hearts_found, time_bonus, total_moves, game_type, session_score, game_date) 
+                                   VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())";
                         $log_params = array(
                             $user_id,
                             $score,
                             $gameData['heartsFound'] ?? 0,
                             $gameData['timeBonus'] ?? 0,
-                            $gameData['moves'] ?? 0
+                            $gameData['moves'] ?? 0,
+                            $gameData['gameType'] ?? 'unknown',
+                            $gameData['sessionScore'] ?? 0
                         );
                         sqlsrv_query($conn, $log_sql, $log_params);
                     }
@@ -72,7 +74,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     echo json_encode([
                         'success' => true,
                         'newScore' => $new_score,
-                        'scoreEarned' => $score
+                        'scoreEarned' => $score,
+                        'message' => 'Score updated successfully'
                     ]);
                 } else {
                     echo json_encode(['success' => false, 'message' => 'Failed to update score']);

@@ -76,10 +76,11 @@ const gameState = {
     currentHeartChallenge: null,
     gameWon: false,
     heartAnswer: null,
-    currentScore: 0,
+    sessionScore: 0, // Current game session score
+    totalScore: 0,   // Total score from database
     heartsFound: 0,
     timeBonus: 0,
-    savedGameState: null // To save game state when going to bonus challenge
+    savedGameState: null
 };
 
 // ---------------- CARD TYPES ----------------
@@ -216,6 +217,7 @@ function initializeGameBoard() {
         gameWon: false,
         heartAnswer: null,
         moves: 0,
+        sessionScore: 0, // Reset session score for new game
         heartsFound: 0,
         timeBonus: 0,
         savedGameState: null
@@ -267,6 +269,32 @@ function updateWelcomeMessage() {
     }
 }
 
+// ---------------- SCORING SYSTEM ----------------
+function addScore(points, reason = '') {
+    gameState.sessionScore += points;
+    updateSessionScoreDisplay();
+    
+    console.log(`+${points} points${reason ? ` for ${reason}` : ''}. Total: ${gameState.sessionScore}`);
+    
+    // Show score animation
+    showScoreAnimation(points);
+}
+
+function showScoreAnimation(points) {
+    const scoreElement = document.getElementById('sessionScore');
+    scoreElement.style.transform = 'scale(1.2)';
+    scoreElement.style.color = '#ff6b9d';
+    
+    setTimeout(() => {
+        scoreElement.style.transform = 'scale(1)';
+        scoreElement.style.color = '';
+    }, 300);
+}
+
+function updateSessionScoreDisplay() {
+    document.getElementById('sessionScore').textContent = gameState.sessionScore;
+}
+
 // ---------------- CARD FLIP ----------------
 function flipCard(card) {
     if (!gameState.gameStarted || card.classList.contains('flipped') || gameState.flippedCards.length >= 2)
@@ -283,6 +311,9 @@ function flipCard(card) {
         updateCharacterMessage('carrot', randomMessage);
         updateStatusMessage('Carrot found! Resetting hearts... 🥕');
         
+        // No points for carrot, but penalty for reset
+        addScore(-5, 'carrot penalty');
+        
         setTimeout(() => {
             gameState.cards.forEach(c => c.classList.remove('flipped'));
             gameState.flippedCards = [];
@@ -297,6 +328,10 @@ function flipCard(card) {
     if (type === 'heart') {
         gameState.heartCardsFlipped++;
         gameState.heartsFound++;
+        
+        // Add points for finding a heart
+        addScore(10, 'finding heart');
+        
         setTimeout(() => {
             checkVictory();
         }, 100);
@@ -308,6 +343,10 @@ function flipCard(card) {
             const randomMessage = cartoonMessages[Math.floor(Math.random() * cartoonMessages.length)];
             updateCharacterMessage('cartoon', randomMessage);
             updateStatusMessage('Hearts Found! ❤️');
+            
+            // Bonus points for matching hearts
+            addScore(25, 'matching hearts');
+            
             gameState.flippedCards = [];
             updateUI();
         } else {
@@ -383,6 +422,11 @@ function addExtraTime(seconds) {
     updateUI();
     updateStatusMessage(`+${seconds} seconds bonus time! ⏰`);
     updateCharacterMessage('cartoon', `Great! You got ${seconds} extra seconds!`);
+    
+    // Show time bonus popup
+    if (typeof showTimeBonusPopup === 'function') {
+        showTimeBonusPopup(seconds);
+    }
 }
 
 function updateUI() {
@@ -408,28 +452,29 @@ function checkVictory() {
     }
 }
 
-// ---------------- SCORE CALCULATION ----------------
-function calculateScore() {
-    // Base points for hearts found
-    const heartPoints = gameState.heartsFound * 50;
+// ---------------- FINAL SCORE CALCULATION ----------------
+function calculateFinalScore() {
+    // Base score from session
+    let finalScore = gameState.sessionScore;
     
     // Time bonus (more time left = more points)
     const timeBonus = Math.floor(gameState.timeLeft * 2);
-    
-    // Efficiency bonus (less moves = more points)
-    const efficiencyBonus = Math.max(0, 100 - gameState.moves * 2);
+    finalScore += timeBonus;
     
     // Perfect game bonus (all hearts found)
-    const perfectBonus = gameState.heartCardsFlipped === gameState.heartCards.length ? 200 : 0;
+    if (gameState.heartCardsFlipped === gameState.heartCards.length) {
+        finalScore += 100; // Perfect game bonus
+    }
     
-    const totalScore = heartPoints + timeBonus + efficiencyBonus + perfectBonus;
+    // Efficiency bonus (less moves = more points)
+    const efficiencyBonus = Math.max(0, 50 - gameState.moves);
+    finalScore += efficiencyBonus;
     
     return {
-        totalScore,
-        heartPoints,
+        finalScore,
         timeBonus,
         efficiencyBonus,
-        perfectBonus
+        perfectBonus: gameState.heartCardsFlipped === gameState.heartCards.length ? 100 : 0
     };
 }
 
@@ -441,9 +486,7 @@ function gameWon() {
     gameState.gameWon = true;
     
     // Calculate final score
-    const scoreData = calculateScore();
-    gameState.currentScore = scoreData.totalScore;
-    gameState.timeBonus = scoreData.timeBonus;
+    const scoreData = calculateFinalScore();
     
     updateStatusMessage('Victory! 🎉');
     updateCharacterMessage('cartoon', "You did it! All hearts found! 🎉");
@@ -458,18 +501,19 @@ function gameWon() {
     }, 500);
     
     // Update victory popup with score details
-    document.getElementById('finalScoreVictory').textContent = scoreData.totalScore;
+    document.getElementById('finalScoreVictory').textContent = scoreData.finalScore;
     document.getElementById('heartsFoundVictory').textContent = gameState.heartsFound;
     document.getElementById('timeBonusVictory').textContent = scoreData.timeBonus;
     document.getElementById('movesVictory').textContent = gameState.moves;
-    document.getElementById('totalScoreVictory').textContent = scoreData.totalScore;
+    document.getElementById('totalScoreVictory').textContent = scoreData.finalScore;
     
-    // Update score in database
-    updateScoreInDatabase(scoreData.totalScore, {
+    // Update final score in database
+    updateScoreInDatabase(scoreData.finalScore, {
         heartsFound: gameState.heartsFound,
         timeBonus: scoreData.timeBonus,
         moves: gameState.moves,
-        gameType: 'victory'
+        gameType: 'victory',
+        sessionScore: gameState.sessionScore
     });
     
     // Show victory popup
@@ -492,6 +536,7 @@ function gameOver() {
             heartCardsFlipped: gameState.heartCardsFlipped,
             heartsFound: gameState.heartsFound,
             moves: gameState.moves,
+            sessionScore: gameState.sessionScore,
             heartCards: [...gameState.heartCards]
         };
         
@@ -506,6 +551,30 @@ function gameOver() {
     } else if (allHeartsFlipped) {
         // Player won but time ran out - still show victory
         gameWon();
+    } else {
+        // Game over without finding all hearts
+        const scoreData = calculateFinalScore();
+        
+        // Update game over popup with score details
+        document.getElementById('finalScoreGameOver').textContent = scoreData.finalScore;
+        document.getElementById('heartsFoundGameOver').textContent = gameState.heartsFound;
+        document.getElementById('timeBonusGameOver').textContent = scoreData.timeBonus;
+        document.getElementById('movesGameOver').textContent = gameState.moves;
+        document.getElementById('totalScoreGameOver').textContent = scoreData.finalScore;
+        
+        // Update final score in database
+        updateScoreInDatabase(scoreData.finalScore, {
+            heartsFound: gameState.heartsFound,
+            timeBonus: scoreData.timeBonus,
+            moves: gameState.moves,
+            gameType: 'game_over',
+            sessionScore: gameState.sessionScore
+        });
+        
+        // Show game over popup
+        setTimeout(() => {
+            document.getElementById('gameOverPopup').classList.add('active');
+        }, 1500);
     }
 }
 
@@ -525,7 +594,7 @@ function updateScoreInDatabase(finalScore, gameData) {
     .then(data => {
         if (data.success) {
             console.log('Score updated successfully in database');
-            // Update the displayed score
+            // Update the displayed total score
             document.getElementById('currentScore').textContent = data.newScore;
         } else {
             console.error('Failed to update score:', data.message);
@@ -583,7 +652,7 @@ function displayHeartChallenge(data) {
                 <p class="challenge-hint">How many hearts do you see in the image above? Enter the number below!</p>
                 <div class="answer-input-container">
                     <input type="number" id="heartAnswerInput" class="answer-input" placeholder="Enter heart count" min="0">
-                    <button id="submitAnswerBtn" class="submit-btn">Check Answer</button>
+                    <button id="submitAnswerBtn" class="submit-btn">Submit Answer</button>
                 </div>
                 <div id="answerFeedback" class="answer-feedback"></div>
             </div>
@@ -628,17 +697,11 @@ function submitAnswer() {
     const correctAnswer = gameState.heartAnswer;
     
     if (userAnswerNum === correctAnswer) {
-        feedback.innerHTML = '🎉 <strong>Correct!</strong> Well done! You earned 30 seconds bonus time! 🎉';
+        feedback.innerHTML = '🎉 <strong>Correct!</strong> Well done! You counted the hearts perfectly! 🎉';
         feedback.className = 'answer-feedback success';
         
         // Add bonus points for correct answer
-        const bonusPoints = 100;
-        updateScoreInDatabase(bonusPoints, {
-            heartsFound: 0,
-            timeBonus: 0,
-            moves: 0,
-            gameType: 'bonus_challenge'
-        });
+        addScore(50, 'bonus challenge');
         
         showCelebration();
         
@@ -670,7 +733,7 @@ function submitAnswer() {
 function resumeGameWithExtraTime(extraSeconds) {
     showScreen('game');
     
-    // Add extra time to the timer
+    // Add extra time to the timer and set liquid timer to half full
     addExtraTime(extraSeconds);
     
     // Restart the timer if it was stopped
@@ -708,19 +771,9 @@ function showCelebration() {
 }
 
 function backToGame() {
-    // If user goes back without solving, resume game without extra time
-    if (gameState.savedGameState) {
-        showScreen('game');
-        // Just resume the game as it was (no extra time)
-        if (!gameState.gameStarted) {
-            gameState.gameStarted = true;
-            startTimer();
-        }
-        updateStatusMessage('Game Resumed! Find more hearts! ❤️');
-    } else {
-        showScreen('game');
-        resetGame();
-    }
+    // If user goes back without solving, show game over
+    showScreen('game');
+    gameOver();
 }
 
 // ---------------- RESET GAME ----------------
@@ -952,3 +1005,5 @@ style.textContent = `
 }
 `;
 document.head.appendChild(style);
+
+

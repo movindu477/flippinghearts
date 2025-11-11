@@ -236,6 +236,71 @@ $is_first_visit = !isset($_POST['login']) && !isset($_GET['registered']);
             font-weight: 700;
             color: #ff6b9d;
         }
+
+        /* Time Bonus Popup */
+        .time-bonus-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 4000;
+            box-shadow: 0 20px 40px rgba(76, 175, 80, 0.4);
+            animation: popIn 0.5s ease-out;
+        }
+
+        .time-bonus-popup h3 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .time-bonus-popup p {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+        }
+
+        .bonus-seconds {
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(45deg, #ffeb3b, #ffc107);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 10px 0;
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: translate(-50%, -50%) scale(0.5);
+                opacity: 0;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Game Session Score Display */
+        .session-score {
+            background: linear-gradient(135deg, rgba(106, 17, 203, 0.9), rgba(37, 117, 252, 0.9));
+            padding: 12px 20px;
+            border-radius: 15px;
+            color: white;
+            font-weight: 700;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 25px rgba(106, 17, 203, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1rem;
+            margin-left: 15px;
+        }
     </style>
 </head>
 
@@ -262,7 +327,11 @@ $is_first_visit = !isset($_POST['login']) && !isset($_GET['registered']);
                         </div>
                         <div class="score-display">
                             <span class="score-icon">🏆</span>
-                            Score: <span id="currentScore"><?php echo $_SESSION['score']; ?></span>
+                            Total Score: <span id="currentScore"><?php echo $_SESSION['score']; ?></span>
+                        </div>
+                        <div class="session-score">
+                            <span class="score-icon">🎮</span>
+                            Game Score: <span id="sessionScore">0</span>
                         </div>
                     </div>
                     <div class="header-right">
@@ -286,7 +355,6 @@ $is_first_visit = !isset($_POST['login']) && !isset($_GET['registered']);
                     </div>
                 </div>
 
-                <!-- Rest of game content remains the same -->
                 <!-- Main Content -->
                 <div class="game-content">
                     <!-- Left Panel - Progress -->
@@ -415,7 +483,6 @@ $is_first_visit = !isset($_POST['login']) && !isset($_GET['registered']);
         </div>
 
         <!-- Heart API Bonus Screen -->
-        <!-- In the bonus screen section, update the header text -->
         <div id="bonusScreen" class="screen">
             <div class="bonus-container">
                 <div class="bonus-header">
@@ -431,6 +498,14 @@ $is_first_visit = !isset($_POST['login']) && !isset($_GET['registered']);
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Time Bonus Popup -->
+        <div id="timeBonusPopup" class="time-bonus-popup" style="display: none;">
+            <h3>🎉 Congratulations! 🎉</h3>
+            <p>You counted the hearts correctly!</p>
+            <div class="bonus-seconds" id="bonusSeconds">+30s</div>
+            <p>Extra time added to your game!</p>
         </div>
 
     <?php else: ?>
@@ -518,8 +593,8 @@ $is_first_visit = !isset($_POST['login']) && !isset($_GET['registered']);
         <div id="successMessage" class="success-popup">
             <div class="success-content">
                 <div class="success-icon">✓</div>
-                <h3>Login Successful!</hh3>
-                    <p>Welcome to Flipping Hearts!</p>
+                <h3>Login Successful!</h3>
+                <p>Welcome to Flipping Hearts!</p>
             </div>
         </div>
     <?php endif; ?>
@@ -579,6 +654,19 @@ $is_first_visit = !isset($_POST['login']) && !isset($_GET['registered']);
                     }
                 })
                 .catch(error => console.error('Error updating score:', error));
+        }
+
+        // Function to show time bonus popup
+        function showTimeBonusPopup(seconds) {
+            const popup = document.getElementById('timeBonusPopup');
+            const bonusSeconds = document.getElementById('bonusSeconds');
+
+            bonusSeconds.textContent = `+${seconds}s`;
+            popup.style.display = 'block';
+
+            setTimeout(() => {
+                popup.style.display = 'none';
+            }, 3000);
         }
     </script>
 </body>
