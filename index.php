@@ -26,7 +26,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
             if ($conn === false) {
                 $login_error = "Database connection failed";
             } else {
-                $sql = "SELECT user_id, username, password, score FROM Users WHERE username = ?";
+                // Check if level column exists
+                $checkColumnSql = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Users' AND COLUMN_NAME = 'level'";
+                $checkStmt = sqlsrv_query($conn, $checkColumnSql);
+                $levelColumnExists = sqlsrv_has_rows($checkStmt);
+                if ($checkStmt)
+                    sqlsrv_free_stmt($checkStmt);
+
+                if ($levelColumnExists) {
+                    $sql = "SELECT user_id, username, password, score, level FROM Users WHERE username = ?";
+                } else {
+                    $sql = "SELECT user_id, username, password, score FROM Users WHERE username = ?";
+                }
+
                 $params = array($username);
                 $stmt = sqlsrv_query($conn, $sql, $params);
 
@@ -37,6 +49,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
                         $_SESSION['user_id'] = $row['user_id'];
                         $_SESSION['username'] = $row['username'];
                         $_SESSION['score'] = $row['score'];
+                        $_SESSION['level'] = $levelColumnExists ? $row['level'] : 1; // Default to 1 if column doesn't exist
                         $login_success = true;
 
                         // Update last login time
@@ -81,6 +94,9 @@ if (isset($_GET['registered'])) {
 
 // Check if this is first visit
 $is_first_visit = !isset($_POST['login']) && !isset($_GET['registered']);
+
+// Safely get level with default value
+$user_level = isset($_SESSION['level']) ? $_SESSION['level'] : 1;
 ?>
 
 <!DOCTYPE html>
@@ -113,21 +129,24 @@ $is_first_visit = !isset($_POST['login']) && !isset($_GET['registered']);
         }
 
         .logout-btn {
-            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+            background: linear-gradient(135deg, #dc3545, #c82333);
             color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
+            padding: 12px 24px;
+            border-radius: 10px;
             text-decoration: none;
-            font-weight: 600;
+            font-weight: 700;
             transition: all 0.3s ease;
             border: none;
             cursor: pointer;
             display: inline-block;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+            font-size: 0.9rem;
         }
 
         .logout-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
+            background: linear-gradient(135deg, #c82333, #bd2130);
         }
 
         /* Ensure forms are properly positioned */
@@ -301,6 +320,101 @@ $is_first_visit = !isset($_POST['login']) && !isset($_GET['registered']);
             font-size: 1.1rem;
             margin-left: 15px;
         }
+
+        /* Level Display */
+        .level-display {
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.9), rgba(255, 152, 0, 0.9));
+            padding: 12px 20px;
+            border-radius: 15px;
+            color: white;
+            font-weight: 700;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 25px rgba(255, 193, 7, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1rem;
+            margin-left: 15px;
+        }
+
+        /* Modern Popup Buttons */
+        .popup-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .popup-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 140px;
+            text-decoration: none;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .confirm-btn {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .confirm-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+        }
+
+        .next-level-btn {
+            background: linear-gradient(135deg, #ff6b9d, #ff8fab);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 107, 157, 0.3);
+        }
+
+        .next-level-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 107, 157, 0.4);
+        }
+
+        /* Level Up Popup */
+        .level-up-popup {
+            background: linear-gradient(135deg, #ff6b9d, #ff8fab);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            margin: 20px 0;
+            box-shadow: 0 15px 35px rgba(255, 107, 157, 0.4);
+        }
+
+        .level-up-popup h3 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: white;
+        }
+
+        .level-up-popup p {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+
+        .new-level {
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(45deg, #ffeb3b, #ffc107);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 15px 0;
+        }
     </style>
 </head>
 
@@ -327,11 +441,15 @@ $is_first_visit = !isset($_POST['login']) && !isset($_GET['registered']);
                         </div>
                         <div class="score-display">
                             <span class="score-icon">🏆</span>
-                            Total Score: <span id="currentScore"><?php echo $_SESSION['score']; ?></span>
+                            Highest Score: <span id="currentScore"><?php echo $_SESSION['score']; ?></span>
                         </div>
                         <div class="session-score">
                             <span class="score-icon">🎮</span>
                             Game Score: <span id="sessionScore">0</span>
+                        </div>
+                        <div class="level-display">
+                            <span class="score-icon">⭐</span>
+                            Level: <span id="currentLevel"><?php echo $user_level; ?></span>
                         </div>
                     </div>
                     <div class="header-right">
@@ -442,6 +560,25 @@ $is_first_visit = !isset($_POST['login']) && !isset($_GET['registered']);
                 </div>
                 <div class="popup-buttons">
                     <button id="playAgain" class="popup-btn confirm-btn">Play Again</button>
+                    <button id="nextLevel" class="popup-btn next-level-btn">Next Level</button>
+                    <a href="index.php?logout=1" class="popup-btn logout-btn">Logout</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Level Up Popup -->
+        <div id="levelUpPopup" class="popup-screen">
+            <div class="popup-content">
+                <div class="popup-icon">🚀</div>
+                <h3>Level Up!</h3>
+                <p>Congratulations! You've advanced to the next level!</p>
+                <div class="level-up-popup">
+                    <h4>New Level Unlocked</h4>
+                    <div class="new-level" id="newLevelDisplay">2</div>
+                    <p>Get ready for a bigger challenge!</p>
+                </div>
+                <div class="popup-buttons">
+                    <button id="startNextLevel" class="popup-btn next-level-btn">Start Level</button>
                     <a href="index.php?logout=1" class="popup-btn logout-btn">Logout</a>
                 </div>
             </div>
@@ -631,8 +768,8 @@ $is_first_visit = !isset($_POST['login']) && !isset($_GET['registered']);
             <?php endif; ?>
         });
 
-        // Function to update score in database (called when game ends)
-        function updateScoreInDatabase(finalScore, gameData) {
+        // Function to update score and level in database (called when game ends)
+        function updateScoreInDatabase(finalScore, gameData, levelUp = false) {
             fetch('update_score.php', {
                 method: 'POST',
                 headers: {
@@ -640,15 +777,19 @@ $is_first_visit = !isset($_POST['login']) && !isset($_GET['registered']);
                 },
                 body: JSON.stringify({
                     score: finalScore,
-                    gameData: gameData
+                    gameData: gameData,
+                    levelUp: levelUp
                 })
             })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         console.log('Score updated successfully in database');
-                        // Update the displayed score
+                        // Update the displayed score and level
                         document.getElementById('currentScore').textContent = data.newScore;
+                        if (data.newLevel) {
+                            document.getElementById('currentLevel').textContent = data.newLevel;
+                        }
                     } else {
                         console.error('Failed to update score:', data.message);
                     }

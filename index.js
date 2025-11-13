@@ -80,7 +80,12 @@ const gameState = {
     totalScore: 0,   // Total score from database
     heartsFound: 0,
     timeBonus: 0,
-    savedGameState: null
+    savedGameState: null,
+    currentLevel: 1, // Start with level 1
+    levelConfig: {
+        1: { gridSize: 4, totalPairs: 8, time: 60, heartCount: 8, carrotCount: 8 },
+        2: { gridSize: 5, totalPairs: 12, time: 75, heartCount: 12, carrotCount: 13 }
+    }
 };
 
 // ---------------- CARD TYPES ----------------
@@ -126,18 +131,31 @@ function initializeGame() {
     UserManager.init();
     showScreen('splash');
     setTimeout(() => showScreen('login'), 3000);
-    document.getElementById('loginForm').addEventListener('submit', handleLogin);
-    document.getElementById('playAgain').addEventListener('click', resetGame);
-    document.getElementById('playAgainGameOver').addEventListener('click', resetGame);
     
-    // Add event listeners for bonus screen buttons
-    document.getElementById('backToGame').addEventListener('click', backToGame);
+    // Add event listeners after DOM is loaded
+    setTimeout(() => {
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) {
+            loginForm.addEventListener('submit', handleLogin);
+        }
+        
+        document.getElementById('playAgain')?.addEventListener('click', resetGame);
+        document.getElementById('playAgainGameOver')?.addEventListener('click', resetGame);
+        document.getElementById('nextLevel')?.addEventListener('click', startNextLevel);
+        document.getElementById('startNextLevel')?.addEventListener('click', startNextLevelGame);
+        
+        // Add event listeners for bonus screen buttons
+        document.getElementById('backToGame')?.addEventListener('click', backToGame);
+    }, 100);
 }
 
 // ---------------- SCREEN CONTROL ----------------
 function showScreen(screenName) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById(screenName + 'Screen').classList.add('active');
+    const screen = document.getElementById(screenName + 'Screen');
+    if (screen) {
+        screen.classList.add('active');
+    }
     gameState.currentScreen = screenName;
 }
 
@@ -205,7 +223,22 @@ function startCountdown() {
 // ---------------- GAME BOARD ----------------
 function initializeGameBoard() {
     const board = document.getElementById('gameBoard');
+    if (!board) return;
+    
     board.innerHTML = '';
+    
+    // Get level configuration
+    const levelConfig = gameState.levelConfig[gameState.currentLevel];
+    gameState.totalPairs = levelConfig.totalPairs;
+    gameState.totalTime = levelConfig.time;
+    gameState.timeLeft = levelConfig.time;
+    
+    // Set grid class based on level
+    board.className = 'game-board';
+    if (gameState.currentLevel > 1) {
+        board.classList.add('level-' + gameState.currentLevel);
+    }
+    
     Object.assign(gameState, {
         cards: [],
         flippedCards: [],
@@ -225,12 +258,21 @@ function initializeGameBoard() {
 
     updateUI();
     updateWelcomeMessage();
+    updateLevelDisplay();
 
     const cardValues = [];
-    for (let i = 0; i < gameState.totalPairs; i++) {
-        const type = cardTypes[Math.floor(Math.random() * cardTypes.length)];
-        cardValues.push(type, type);
+    const levelConfigData = gameState.levelConfig[gameState.currentLevel];
+    
+    // Add hearts
+    for (let i = 0; i < levelConfigData.heartCount; i++) {
+        cardValues.push(cardTypes[0]); // heart
     }
+    
+    // Add carrots
+    for (let i = 0; i < levelConfigData.carrotCount; i++) {
+        cardValues.push(cardTypes[1]); // carrot
+    }
+    
     shuffleArray(cardValues);
 
     cardValues.forEach((data, i) => {
@@ -253,8 +295,8 @@ function initializeGameBoard() {
     });
 
     resetTimer();
-    updateStatusMessage('Find all the ❤️! Avoid 🥕!');
-    updateCharacterMessage('cartoon', "Find all the hearts! ❤️");
+    updateStatusMessage(`Level ${gameState.currentLevel}: Find all the ❤️! Avoid 🥕!`);
+    updateCharacterMessage('cartoon', `Level ${gameState.currentLevel}! Find all the hearts! ❤️`);
     updateCharacterMessage('carrot', "Don't find me! 🥕");
 }
 
@@ -266,6 +308,14 @@ function updateWelcomeMessage() {
     if (currentUser && welcomeElement) {
         welcomeElement.textContent = `Welcome, ${currentUser}!`;
         welcomeElement.style.display = 'block';
+    }
+}
+
+// ---------------- UPDATE LEVEL DISPLAY ----------------
+function updateLevelDisplay() {
+    const levelElement = document.getElementById('currentLevel');
+    if (levelElement) {
+        levelElement.textContent = gameState.currentLevel;
     }
 }
 
@@ -292,7 +342,10 @@ function showScoreAnimation(points) {
 }
 
 function updateSessionScoreDisplay() {
-    document.getElementById('sessionScore').textContent = gameState.sessionScore;
+    const sessionScoreElement = document.getElementById('sessionScore');
+    if (sessionScoreElement) {
+        sessionScoreElement.textContent = gameState.sessionScore;
+    }
 }
 
 // ---------------- CARD FLIP ----------------
@@ -391,7 +444,7 @@ function startGame() {
     if (gameState.gameStarted) return;
     gameState.gameStarted = true;
     startTimer();
-    updateStatusMessage('Game Started! ❤️ Avoid 🥕!');
+    updateStatusMessage(`Level ${gameState.currentLevel} Started! ❤️ Avoid 🥕!`);
 }
 
 function startTimer() {
@@ -430,18 +483,24 @@ function addExtraTime(seconds) {
 }
 
 function updateUI() {
-    document.getElementById('matchesValue').textContent = `${gameState.heartCardsFlipped}/${gameState.heartCards.length}`;
-    document.getElementById('movesValue').textContent = gameState.moves;
-    document.getElementById('timerValue').textContent = `${gameState.timeLeft}s`;
+    const matchesElement = document.getElementById('matchesValue');
+    const movesElement = document.getElementById('movesValue');
+    const timerElement = document.getElementById('timerValue');
     const liquid = document.getElementById('liquidFill');
+    
+    if (matchesElement) matchesElement.textContent = `${gameState.heartCardsFlipped}/${gameState.heartCards.length}`;
+    if (movesElement) movesElement.textContent = gameState.moves;
+    if (timerElement) timerElement.textContent = `${gameState.timeLeft}s`;
     if (liquid) liquid.style.height = `${(gameState.timeLeft / gameState.totalTime) * 100}%`;
 }
 
 function updateStatusMessage(msg) {
     const el = document.getElementById('statusMessage');
-    el.textContent = msg;
-    el.style.animation = 'none';
-    setTimeout(() => (el.style.animation = 'textGlow 2s ease-in-out infinite'), 10);
+    if (el) {
+        el.textContent = msg;
+        el.style.animation = 'none';
+        setTimeout(() => (el.style.animation = 'textGlow 2s ease-in-out infinite'), 10);
+    }
 }
 
 // ---------------- VICTORY CHECK ----------------
@@ -470,11 +529,16 @@ function calculateFinalScore() {
     const efficiencyBonus = Math.max(0, 50 - gameState.moves);
     finalScore += efficiencyBonus;
     
+    // Level multiplier
+    const levelMultiplier = 1 + (gameState.currentLevel - 1) * 0.5; // 50% increase per level
+    finalScore = Math.floor(finalScore * levelMultiplier);
+    
     return {
         finalScore,
         timeBonus,
         efficiencyBonus,
-        perfectBonus: gameState.heartCardsFlipped === gameState.heartCards.length ? 100 : 0
+        perfectBonus: gameState.heartCardsFlipped === gameState.heartCards.length ? 100 : 0,
+        levelMultiplier
     };
 }
 
@@ -513,7 +577,8 @@ function gameWon() {
         timeBonus: scoreData.timeBonus,
         moves: gameState.moves,
         gameType: 'victory',
-        sessionScore: gameState.sessionScore
+        sessionScore: gameState.sessionScore,
+        level: gameState.currentLevel
     });
     
     // Show victory popup
@@ -568,7 +633,8 @@ function gameOver() {
             timeBonus: scoreData.timeBonus,
             moves: gameState.moves,
             gameType: 'game_over',
-            sessionScore: gameState.sessionScore
+            sessionScore: gameState.sessionScore,
+            level: gameState.currentLevel
         });
         
         // Show game over popup
@@ -578,8 +644,40 @@ function gameOver() {
     }
 }
 
+// ---------------- LEVEL SYSTEM ----------------
+function startNextLevel() {
+    // Close current popup
+    document.getElementById('victoryPopup').classList.remove('active');
+    
+    // Check if there's a next level
+    const nextLevel = gameState.currentLevel + 1;
+    if (gameState.levelConfig[nextLevel]) {
+        // Show level up popup
+        document.getElementById('newLevelDisplay').textContent = nextLevel;
+        document.getElementById('levelUpPopup').classList.add('active');
+        
+        // Update level in database
+        updateScoreInDatabase(0, { levelUp: true }, true);
+    } else {
+        // No more levels, reset to level 1
+        gameState.currentLevel = 1;
+        resetGame();
+    }
+}
+
+function startNextLevelGame() {
+    // Close level up popup
+    document.getElementById('levelUpPopup').classList.remove('active');
+    
+    // Increment level
+    gameState.currentLevel++;
+    
+    // Start countdown for next level
+    startCountdown();
+}
+
 // ---------------- UPDATE SCORE IN DATABASE ----------------
-function updateScoreInDatabase(finalScore, gameData) {
+function updateScoreInDatabase(finalScore, gameData, levelUp = false) {
     fetch('update_score.php', {
         method: 'POST',
         headers: {
@@ -587,15 +685,21 @@ function updateScoreInDatabase(finalScore, gameData) {
         },
         body: JSON.stringify({
             score: finalScore,
-            gameData: gameData
+            gameData: gameData,
+            levelUp: levelUp,
+            currentLevel: gameState.currentLevel
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
             console.log('Score updated successfully in database');
-            // Update the displayed total score
+            // Update the displayed total score and level
             document.getElementById('currentScore').textContent = data.newScore;
+            if (data.newLevel) {
+                document.getElementById('currentLevel').textContent = data.newLevel;
+                gameState.currentLevel = data.newLevel;
+            }
         } else {
             console.error('Failed to update score:', data.message);
         }
@@ -785,6 +889,10 @@ function resetGame() {
     
     document.getElementById('victoryPopup').classList.remove('active');
     document.getElementById('gameOverPopup').classList.remove('active');
+    document.getElementById('levelUpPopup').classList.remove('active');
+    
+    // Reset to level 1 when starting over
+    gameState.currentLevel = 1;
     initializeGameBoard();
     startGame();
 }
@@ -1005,5 +1113,3 @@ style.textContent = `
 }
 `;
 document.head.appendChild(style);
-
-

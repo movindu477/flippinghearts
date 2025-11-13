@@ -415,11 +415,11 @@ background: url('images/login.mp4');
     font-size: 1.1rem;
     font-weight: 600;
     color: white;
-    background: rgb(0, 0, 0);
+    background: rgba(0, 0, 0, 0.7);
     padding: 10px 20px;
     border-radius: 15px;
     backdrop-filter: blur(10px);
-    border: 1px solid rgb(0, 0, 0);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     animation: welcomeGlow 3s ease-in-out;
     margin-left: 20px;
 }
@@ -676,6 +676,7 @@ background: url('images/login.mp4');
     border-top-color: rgba(255, 255, 255, 0.95);
 }
 
+/* Modern Game Board */
 .game-board {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -689,6 +690,14 @@ background: url('images/login.mp4');
     position: relative;
     overflow: hidden;
     z-index: 1;
+    transition: all 0.3s ease;
+}
+
+/* Level 2 - 5x5 Grid */
+.game-board.level-2 {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    padding: 15px;
 }
 
 .card {
@@ -699,6 +708,12 @@ background: url('images/login.mp4');
     opacity: 0;
     transform: translateY(-100px) rotateX(90deg);
     animation: cardFall 0.8s ease-out forwards;
+}
+
+/* Smaller cards for level 2 */
+.game-board.level-2 .card {
+    width: 80px;
+    height: 80px;
 }
 
 @keyframes cardFall {
@@ -733,6 +748,15 @@ background: url('images/login.mp4');
 .card:nth-child(14) { animation-delay: 1.4s; }
 .card:nth-child(15) { animation-delay: 1.5s; }
 .card:nth-child(16) { animation-delay: 1.6s; }
+.card:nth-child(17) { animation-delay: 1.7s; }
+.card:nth-child(18) { animation-delay: 1.8s; }
+.card:nth-child(19) { animation-delay: 1.9s; }
+.card:nth-child(20) { animation-delay: 2.0s; }
+.card:nth-child(21) { animation-delay: 2.1s; }
+.card:nth-child(22) { animation-delay: 2.2s; }
+.card:nth-child(23) { animation-delay: 2.3s; }
+.card:nth-child(24) { animation-delay: 2.4s; }
+.card:nth-child(25) { animation-delay: 2.5s; }
 
 .card-inner {
     position: relative;
@@ -790,6 +814,10 @@ background: url('images/login.mp4');
     transition: transform 0.3s ease;
 }
 
+.game-board.level-2 .card-front .icon {
+    font-size: 2.2rem;
+}
+
 .card:hover .card-front .icon {
     transform: scale(1.1);
 }
@@ -801,6 +829,10 @@ background: url('images/login.mp4');
     color: #ff6b9d;
     font-weight: bold;
     animation: cardPulse 2s ease-in-out infinite;
+}
+
+.game-board.level-2 .card-back {
+    font-size: 1.5rem;
 }
 
 @keyframes cardPulse {
@@ -912,7 +944,7 @@ background: url('images/login.mp4');
     animation: popIn 0.5s ease-out;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
     border: 1px solid rgba(255, 255, 255, 0.3);
-    max-width: 400px;
+    max-width: 500px;
     width: 90%;
 }
 
@@ -938,39 +970,98 @@ background: url('images/login.mp4');
     display: flex;
     gap: 15px;
     justify-content: center;
+    margin-top: 20px;
+    flex-wrap: wrap;
 }
 
 .popup-btn {
     padding: 12px 24px;
     border: none;
-    border-radius: 12px;
+    border-radius: 10px;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    min-width: 120px;
+    min-width: 140px;
+    text-decoration: none;
+    text-align: center;
+    display: inline-block;
 }
 
 .confirm-btn {
-    background: linear-gradient(135deg, #ff6b9d, #ff8fab);
+    background: linear-gradient(135deg, #28a745, #20c997);
     color: white;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
 }
 
 .confirm-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(255, 107, 157, 0.4);
+    box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
 }
 
-.cancel-btn {
-    background: rgba(108, 117, 125, 0.1);
-    color: #6c757d;
-    border: 2px solid #6c757d;
-}
-
-.cancel-btn:hover {
-    background: #6c757d;
+.next-level-btn {
+    background: linear-gradient(135deg, #ff6b9d, #ff8fab);
     color: white;
+    box-shadow: 0 4px 15px rgba(255, 107, 157, 0.3);
+}
+
+.next-level-btn:hover {
     transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 107, 157, 0.4);
+}
+
+.logout-btn {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    color: white;
+    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+}
+
+.logout-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
+}
+
+/* Game Over Popup Specific Styles */
+#gameOverPopup .popup-icon {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+    color: white;
+}
+
+#gameOverPopup h3 {
+    color: #ff6b6b;
+}
+
+/* Level Up Popup */
+.level-up-popup {
+    background: linear-gradient(135deg, #ff6b9d, #ff8fab);
+    color: white;
+    padding: 30px;
+    border-radius: 20px;
+    text-align: center;
+    margin: 20px 0;
+    box-shadow: 0 15px 35px rgba(255, 107, 157, 0.4);
+}
+
+.level-up-popup h3 {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    color: white;
+}
+
+.level-up-popup p {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    opacity: 0.9;
+}
+
+.new-level {
+    font-size: 3rem;
+    font-weight: 900;
+    background: linear-gradient(45deg, #ffeb3b, #ffc107);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 15px 0;
 }
 
 /* Responsive Design */
@@ -1000,8 +1091,17 @@ background: url('images/login.mp4');
         height: 90px;
     }
     
+    .game-board.level-2 .card {
+        width: 70px;
+        height: 70px;
+    }
+    
     .card-front .icon {
         font-size: 2.5rem;
+    }
+    
+    .game-board.level-2 .card-front .icon {
+        font-size: 2rem;
     }
     
     .liquid-timer {
@@ -1066,8 +1166,17 @@ background: url('images/login.mp4');
         height: 70px;
     }
     
+    .game-board.level-2 .card {
+        width: 55px;
+        height: 55px;
+    }
+    
     .card-front .icon {
         font-size: 2rem;
+    }
+    
+    .game-board.level-2 .card-front .icon {
+        font-size: 1.5rem;
     }
     
     .character-img {
@@ -1111,6 +1220,11 @@ background: url('images/login.mp4');
     
     .popup-buttons {
         flex-direction: column;
+        align-items: center;
+    }
+    
+    .popup-btn {
+        min-width: 200px;
     }
 }
 
@@ -1142,8 +1256,17 @@ background: url('images/login.mp4');
         height: 60px;
     }
     
+    .game-board.level-2 .card {
+        width: 45px;
+        height: 45px;
+    }
+    
     .card-front .icon {
         font-size: 1.8rem;
+    }
+    
+    .game-board.level-2 .card-front .icon {
+        font-size: 1.2rem;
     }
     
     .game-title-small {
@@ -1186,6 +1309,19 @@ background: url('images/login.mp4');
     
     .countdown-text {
         font-size: 1.5rem;
+    }
+    
+    .popup-content {
+        padding: 2rem;
+    }
+    
+    .popup-buttons {
+        gap: 10px;
+    }
+    
+    .popup-btn {
+        min-width: 180px;
+        padding: 10px 20px;
     }
 }
 
@@ -1336,12 +1472,36 @@ background: url('images/login.mp4');
     }
 }
 
-/* Game Over Popup Specific Styles */
-#gameOverPopup .popup-icon {
-    background: linear-gradient(135deg, #ff6b6b, #ee5a52);
-    color: white;
+
+
+/* Level 2 - 5x5 Grid */
+.game-board.level-2 {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    padding: 15px;
 }
 
-#gameOverPopup h3 {
-    color: #ff6b6b;
+/* Smaller cards for level 2 */
+.game-board.level-2 .card {
+    width: 80px;
+    height: 80px;
 }
+
+.game-board.level-2 .card-front .icon {
+    font-size: 2.2rem;
+}
+
+.game-board.level-2 .card-back {
+    font-size: 1.5rem;
+}
+
+/* Staggered animation for level 2 cards */
+.game-board.level-2 .card:nth-child(17) { animation-delay: 1.7s; }
+.game-board.level-2 .card:nth-child(18) { animation-delay: 1.8s; }
+.game-board.level-2 .card:nth-child(19) { animation-delay: 1.9s; }
+.game-board.level-2 .card:nth-child(20) { animation-delay: 2.0s; }
+.game-board.level-2 .card:nth-child(21) { animation-delay: 2.1s; }
+.game-board.level-2 .card:nth-child(22) { animation-delay: 2.2s; }
+.game-board.level-2 .card:nth-child(23) { animation-delay: 2.3s; }
+.game-board.level-2 .card:nth-child(24) { animation-delay: 2.4s; }
+.game-board.level-2 .card:nth-child(25) { animation-delay: 2.5s; }
