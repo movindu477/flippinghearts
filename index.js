@@ -83,8 +83,8 @@ const gameState = {
     savedGameState: null,
     currentLevel: 1, // Start with level 1
     levelConfig: {
-        1: { gridSize: 4, totalPairs: 8, time: 60, heartCount: 8, carrotCount: 8 },
-        2: { gridSize: 5, totalPairs: 12, time: 75, heartCount: 12, carrotCount: 13 }
+        1: { gridSize: 4, totalPairs: 8, time: 60, heartCount: 8, carrotCount: 8, totalCards: 16 },
+        2: { gridSize: 5, totalPairs: 12, time: 75, heartCount: 12, carrotCount: 13, totalCards: 25 }
     }
 };
 
@@ -672,8 +672,13 @@ function startNextLevelGame() {
     // Increment level
     gameState.currentLevel++;
     
-    // Start countdown for next level
-    startCountdown();
+    // Update level display immediately
+    updateLevelDisplay();
+    
+    // Start the next level directly without countdown
+    showScreen('game');
+    initializeGameBoard();
+    startGame();
 }
 
 // ---------------- UPDATE SCORE IN DATABASE ----------------

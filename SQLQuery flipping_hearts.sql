@@ -10,5 +10,6 @@ CREATE TABLE Users (
 );
 
 ALTER TABLE Users ADD score INT DEFAULT 0;
+ALTER TABLE Users ADD level INT DEFAULT 1;
 
 select * from Users;
