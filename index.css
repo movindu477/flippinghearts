@@ -1505,3 +1505,205 @@ background: url('images/login.mp4');
 .game-board.level-2 .card:nth-child(23) { animation-delay: 2.3s; }
 .game-board.level-2 .card:nth-child(24) { animation-delay: 2.4s; }
 .game-board.level-2 .card:nth-child(25) { animation-delay: 2.5s; }
+
+
+/* Dashboard Styles */
+.dashboard-btn {
+    background: linear-gradient(135deg, #ffa726, #ff9800);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 700;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    display: inline-block;
+    box-shadow: 0 4px 15px rgba(255, 167, 38, 0.3);
+    font-size: 0.9rem;
+    margin-right: 15px;
+}
+
+.dashboard-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(255, 167, 38, 0.4);
+    background: linear-gradient(135deg, #ff9800, #f57c00);
+}
+
+.dashboard-content {
+    max-width: 600px;
+    width: 95%;
+}
+
+.dashboard-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.user-stats, .leaderboard {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.user-stats h4, .leaderboard h4 {
+    color: #333;
+    margin-bottom: 15px;
+    text-align: center;
+    font-size: 1.2rem;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat-label {
+    color: #666;
+    font-weight: 500;
+}
+
+.stat-value {
+    color: #ff6b9d;
+    font-weight: 700;
+}
+
+.leaderboard-content {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.leaderboard-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.leaderboard-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(5px);
+}
+
+.leaderboard-item.current-user {
+    background: linear-gradient(135deg, rgba(255, 107, 157, 0.2), rgba(255, 143, 171, 0.2));
+    border: 2px solid rgba(255, 107, 157, 0.5);
+}
+
+.rank {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    margin-right: 12px;
+    font-size: 0.9rem;
+}
+
+.rank-1 {
+    background: linear-gradient(135deg, #ffd700, #ffed4e);
+    color: #333;
+}
+
+.rank-2 {
+    background: linear-gradient(135deg, #c0c0c0, #e0e0e0);
+    color: #333;
+}
+
+.rank-3 {
+    background: linear-gradient(135deg, #cd7f32, #e39e54);
+    color: white;
+}
+
+.rank-other {
+    background: rgba(255, 255, 255, 0.2);
+    color: #333;
+}
+
+.leaderboard-info {
+    flex: 1;
+}
+
+.leaderboard-username {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 2px;
+}
+
+.leaderboard-score {
+    color: #ff6b9d;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.leaderboard-level {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.loading {
+    text-align: center;
+    color: #666;
+    padding: 20px;
+}
+
+/* Responsive design for dashboard */
+@media (max-width: 768px) {
+    .dashboard-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .dashboard-btn {
+        padding: 10px 16px;
+        font-size: 0.8rem;
+        margin-right: 10px;
+    }
+}
+
+
+
+/* Dashboard specific styles */
+.leaderboard-separator {
+    text-align: center;
+    color: #666;
+    font-size: 1.2rem;
+    margin: 10px 0;
+    font-weight: bold;
+}
+
+.no-data {
+    text-align: center;
+    color: #666;
+    padding: 40px 20px;
+    font-style: italic;
+}
+
+.error {
+    text-align: center;
+    color: #ff6b6b;
+    padding: 20px;
+}
+
+/* Celebration animation for new high score */
+@keyframes newHighScore {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.new-high-score {
+    animation: newHighScore 0.6s ease 3;
+    color: #ffd700 !important;
+}

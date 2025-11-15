@@ -1118,3 +1118,133 @@ style.textContent = `
 }
 `;
 document.head.appendChild(style);
+
+// ---------------- DASHBOARD FUNCTIONS ----------------
+function initializeDashboard() {
+    const dashboardBtn = document.getElementById('dashboardBtn');
+    const dashboardPopup = document.getElementById('dashboardPopup');
+    const closeDashboard = document.getElementById('closeDashboard');
+    
+    if (dashboardBtn) {
+        dashboardBtn.addEventListener('click', showDashboard);
+    }
+    
+    if (closeDashboard) {
+        closeDashboard.addEventListener('click', hideDashboard);
+    }
+    
+    // Close dashboard when clicking outside
+    if (dashboardPopup) {
+        dashboardPopup.addEventListener('click', function(e) {
+            if (e.target === dashboardPopup) {
+                hideDashboard();
+            }
+        });
+    }
+}
+
+function showDashboard() {
+    const dashboardPopup = document.getElementById('dashboardPopup');
+    dashboardPopup.classList.add('active');
+    loadLeaderboard();
+}
+
+function hideDashboard() {
+    const dashboardPopup = document.getElementById('dashboardPopup');
+    dashboardPopup.classList.remove('active');
+}
+
+function loadLeaderboard() {
+    const leaderboardContent = document.getElementById('leaderboardContent');
+    
+    if (!leaderboardContent) return;
+    
+    leaderboardContent.innerHTML = '<div class="loading">Loading leaderboard...</div>';
+    
+    fetch('dashboard.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayLeaderboard(data.leaderboard, data.currentUser);
+            } else {
+                leaderboardContent.innerHTML = '<div class="error">Failed to load leaderboard</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading leaderboard:', error);
+            leaderboardContent.innerHTML = '<div class="error">Error loading leaderboard</div>';
+        });
+}
+
+function displayLeaderboard(leaderboard, currentUser) {
+    const leaderboardContent = document.getElementById('leaderboardContent');
+    
+    if (!leaderboardContent) return;
+    
+    if (leaderboard.length === 0) {
+        leaderboardContent.innerHTML = '<div class="no-data">No scores yet. Be the first to play!</div>';
+        return;
+    }
+    
+    let html = '';
+    
+    // Display top 10 leaderboard
+    leaderboard.forEach(user => {
+        const isCurrentUser = currentUser && user.username === currentUser.username;
+        const rankClass = `rank-${user.rank <= 3 ? user.rank : 'other'}`;
+        
+        html += `
+            <div class="leaderboard-item ${isCurrentUser ? 'current-user' : ''}">
+                <div class="rank ${rankClass}">${user.rank}</div>
+                <div class="leaderboard-info">
+                    <div class="leaderboard-username">${user.username}</div>
+                    <div class="leaderboard-score">${user.score} points</div>
+                    <div class="leaderboard-level">Level ${user.level}</div>
+                </div>
+            </div>
+        `;
+    });
+    
+    // If current user is not in top 10, show them separately
+    if (currentUser && !leaderboard.some(user => user.username === currentUser.username)) {
+        html += `
+            <div class="leaderboard-separator">...</div>
+            <div class="leaderboard-item current-user">
+                <div class="rank rank-other">${currentUser.rank}</div>
+                <div class="leaderboard-info">
+                    <div class="leaderboard-username">${currentUser.username} (You)</div>
+                    <div class="leaderboard-score">${currentUser.score} points</div>
+                    <div class="leaderboard-level">Level ${currentUser.level}</div>
+                </div>
+            </div>
+        `;
+    }
+    
+    leaderboardContent.innerHTML = html;
+}
+
+// Update the initializeGame function to include dashboard initialization
+function initializeGame() {
+    UserManager.init();
+    showScreen('splash');
+    setTimeout(() => showScreen('login'), 3000);
+    
+    // Add event listeners after DOM is loaded
+    setTimeout(() => {
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) {
+            loginForm.addEventListener('submit', handleLogin);
+        }
+        
+        document.getElementById('playAgain')?.addEventListener('click', resetGame);
+        document.getElementById('playAgainGameOver')?.addEventListener('click', resetGame);
+        document.getElementById('nextLevel')?.addEventListener('click', startNextLevel);
+        document.getElementById('startNextLevel')?.addEventListener('click', startNextLevelGame);
+        
+        // Add event listeners for bonus screen buttons
+        document.getElementById('backToGame')?.addEventListener('click', backToGame);
+        
+        // Initialize dashboard
+        initializeDashboard();
+    }, 100);
+}

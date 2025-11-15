@@ -56,13 +56,14 @@ try {
         $currentLevel = $levelColumnExists ? $row['level'] : 1;
 
         // Update score (only if new score is higher)
+        $updatedScore = $newScore;
         if ($newScore > $currentScore) {
             $updateSql = "UPDATE Users SET score = ? WHERE user_id = ?";
             $updateParams = array($newScore, $_SESSION['user_id']);
             sqlsrv_query($conn, $updateSql, $updateParams);
             $_SESSION['score'] = $newScore;
         } else {
-            $newScore = $currentScore; // Keep the current score if it's higher
+            $updatedScore = $currentScore; // Keep the current score if it's higher
         }
 
         // Handle level up
@@ -77,8 +78,9 @@ try {
 
         echo json_encode([
             'success' => true,
-            'newScore' => $newScore,
-            'newLevel' => $newLevel
+            'newScore' => $updatedScore,
+            'newLevel' => $newLevel,
+            'scoreIncreased' => $newScore > $currentScore
         ]);
     } else {
         echo json_encode(['success' => false, 'message' => 'User not found']);

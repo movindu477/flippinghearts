@@ -34,9 +34,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
                     sqlsrv_free_stmt($checkStmt);
 
                 if ($levelColumnExists) {
-                    $sql = "SELECT user_id, username, password, score, level FROM Users WHERE username = ?";
+                    $sql = "SELECT user_id, username, password, score, level, last_login FROM Users WHERE username = ?";
                 } else {
-                    $sql = "SELECT user_id, username, password, score FROM Users WHERE username = ?";
+                    $sql = "SELECT user_id, username, password, score, last_login FROM Users WHERE username = ?";
                 }
 
                 $params = array($username);
@@ -50,6 +50,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
                         $_SESSION['username'] = $row['username'];
                         $_SESSION['score'] = $row['score'];
                         $_SESSION['level'] = $levelColumnExists ? $row['level'] : 1; // Default to 1 if column doesn't exist
+                        $_SESSION['last_login'] = $row['last_login'] ? $row['last_login']->format('Y-m-d H:i:s') : null;
                         $login_success = true;
 
                         // Update last login time
@@ -147,6 +148,29 @@ $user_level = isset($_SESSION['level']) ? $_SESSION['level'] : 1;
             transform: translateY(-3px);
             box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
             background: linear-gradient(135deg, #c82333, #bd2130);
+        }
+
+        /* Dashboard Button */
+        .dashboard-btn {
+            background: linear-gradient(135deg, #ffa726, #ff9800);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: inline-block;
+            box-shadow: 0 4px 15px rgba(255, 167, 38, 0.3);
+            font-size: 0.9rem;
+            margin-right: 15px;
+        }
+
+        .dashboard-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255, 167, 38, 0.4);
+            background: linear-gradient(135deg, #ff9800, #f57c00);
         }
 
         /* Ensure forms are properly positioned */
@@ -415,6 +439,192 @@ $user_level = isset($_SESSION['level']) ? $_SESSION['level'] : 1;
             background-clip: text;
             margin: 15px 0;
         }
+
+        /* Dashboard Styles */
+        .dashboard-content {
+            max-width: 700px;
+            width: 95%;
+        }
+
+        .dashboard-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .user-stats,
+        .leaderboard {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .user-stats h4,
+        .leaderboard h4 {
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 1.2rem;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            color: #ff6b9d;
+            font-weight: 700;
+        }
+
+        .leaderboard-content {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .leaderboard-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .leaderboard-item.current-user {
+            background: linear-gradient(135deg, rgba(255, 107, 157, 0.2), rgba(255, 143, 171, 0.2));
+            border: 2px solid rgba(255, 107, 157, 0.5);
+        }
+
+        .rank {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            margin-right: 12px;
+            font-size: 0.9rem;
+        }
+
+        .rank-1 {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #333;
+        }
+
+        .rank-2 {
+            background: linear-gradient(135deg, #c0c0c0, #e0e0e0);
+            color: #333;
+        }
+
+        .rank-3 {
+            background: linear-gradient(135deg, #cd7f32, #e39e54);
+            color: white;
+        }
+
+        .rank-other {
+            background: rgba(255, 255, 255, 0.2);
+            color: #333;
+        }
+
+        .leaderboard-info {
+            flex: 1;
+        }
+
+        .leaderboard-username {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 2px;
+        }
+
+        .leaderboard-score {
+            color: #ff6b9d;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .leaderboard-level {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .loading {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+
+        .leaderboard-separator {
+            text-align: center;
+            color: #666;
+            font-size: 1.2rem;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #666;
+            padding: 40px 20px;
+            font-style: italic;
+        }
+
+        .error {
+            text-align: center;
+            color: #ff6b6b;
+            padding: 20px;
+        }
+
+        /* Celebration animation for new high score */
+        @keyframes newHighScore {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .new-high-score {
+            animation: newHighScore 0.6s ease 3;
+            color: #ffd700 !important;
+        }
+
+        /* Responsive design for dashboard */
+        @media (max-width: 768px) {
+            .dashboard-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .dashboard-btn {
+                padding: 10px 16px;
+                font-size: 0.8rem;
+                margin-right: 10px;
+            }
+        }
     </style>
 </head>
 
@@ -467,6 +677,8 @@ $user_level = isset($_SESSION['level']) ? $_SESSION['level'] : 1;
                                 <div class="stat-value" id="movesValue">0</div>
                             </div>
                         </div>
+                        <!-- Dashboard Button -->
+                        <button id="dashboardBtn" class="dashboard-btn">🏆 Dashboard</button>
                         <div class="logout-section">
                             <a href="index.php?logout=1" class="logout-btn">Logout</a>
                         </div>
@@ -526,6 +738,53 @@ $user_level = isset($_SESSION['level']) ? $_SESSION['level'] : 1;
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Popup -->
+        <div id="dashboardPopup" class="popup-screen">
+            <div class="popup-content dashboard-content">
+                <div class="popup-icon">🏆</div>
+                <h3>Game Dashboard</h3>
+                <p>Top performers and your statistics</p>
+
+                <div class="dashboard-stats">
+                    <div class="user-stats">
+                        <h4>Your Statistics</h4>
+                        <div class="stat-item">
+                            <span class="stat-label">Highest Score:</span>
+                            <span class="stat-value" id="userHighScore"><?php echo $_SESSION['score']; ?></span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Current Level:</span>
+                            <span class="stat-value" id="userCurrentLevel"><?php echo $user_level; ?></span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Last Login:</span>
+                            <span class="stat-value" id="userLastLogin">
+                                <?php
+                                if (isset($_SESSION['last_login'])) {
+                                    echo date('M j, Y g:i A', strtotime($_SESSION['last_login']));
+                                } else {
+                                    echo 'Never';
+                                }
+                                ?>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="leaderboard">
+                        <h4>🏆 Top Scorers</h4>
+                        <div id="leaderboardContent" class="leaderboard-content">
+                            <div class="loading">Loading leaderboard...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="popup-buttons">
+                    <button id="closeDashboard" class="popup-btn confirm-btn">Close</button>
+                    <a href="index.php?logout=1" class="popup-btn logout-btn">Logout</a>
                 </div>
             </div>
         </div>
@@ -764,6 +1023,9 @@ $user_level = isset($_SESSION['level']) ? $_SESSION['level'] : 1;
                     if (typeof startCountdown === 'function') {
                         startCountdown();
                     }
+
+                    // Initialize dashboard functionality
+                    initializeDashboard();
                 }, 1000);
             <?php endif; ?>
         });
@@ -787,8 +1049,19 @@ $user_level = isset($_SESSION['level']) ? $_SESSION['level'] : 1;
                         console.log('Score updated successfully in database');
                         // Update the displayed score and level
                         document.getElementById('currentScore').textContent = data.newScore;
+                        document.getElementById('userHighScore').textContent = data.newScore;
                         if (data.newLevel) {
                             document.getElementById('currentLevel').textContent = data.newLevel;
+                            document.getElementById('userCurrentLevel').textContent = data.newLevel;
+                        }
+
+                        // If score increased, show celebration
+                        if (data.scoreIncreased) {
+                            const scoreElement = document.getElementById('currentScore');
+                            scoreElement.classList.add('new-high-score');
+                            setTimeout(() => {
+                                scoreElement.classList.remove('new-high-score');
+                            }, 2000);
                         }
                     } else {
                         console.error('Failed to update score:', data.message);
@@ -808,6 +1081,110 @@ $user_level = isset($_SESSION['level']) ? $_SESSION['level'] : 1;
             setTimeout(() => {
                 popup.style.display = 'none';
             }, 3000);
+        }
+
+        // Dashboard Functions
+        function initializeDashboard() {
+            const dashboardBtn = document.getElementById('dashboardBtn');
+            const dashboardPopup = document.getElementById('dashboardPopup');
+            const closeDashboard = document.getElementById('closeDashboard');
+
+            if (dashboardBtn) {
+                dashboardBtn.addEventListener('click', showDashboard);
+            }
+
+            if (closeDashboard) {
+                closeDashboard.addEventListener('click', hideDashboard);
+            }
+
+            // Close dashboard when clicking outside
+            if (dashboardPopup) {
+                dashboardPopup.addEventListener('click', function (e) {
+                    if (e.target === dashboardPopup) {
+                        hideDashboard();
+                    }
+                });
+            }
+        }
+
+        function showDashboard() {
+            const dashboardPopup = document.getElementById('dashboardPopup');
+            dashboardPopup.classList.add('active');
+            loadLeaderboard();
+        }
+
+        function hideDashboard() {
+            const dashboardPopup = document.getElementById('dashboardPopup');
+            dashboardPopup.classList.remove('active');
+        }
+
+        function loadLeaderboard() {
+            const leaderboardContent = document.getElementById('leaderboardContent');
+
+            if (!leaderboardContent) return;
+
+            leaderboardContent.innerHTML = '<div class="loading">Loading leaderboard...</div>';
+
+            fetch('dashboard.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayLeaderboard(data.leaderboard, data.currentUser);
+                    } else {
+                        leaderboardContent.innerHTML = '<div class="error">Failed to load leaderboard</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading leaderboard:', error);
+                    leaderboardContent.innerHTML = '<div class="error">Error loading leaderboard</div>';
+                });
+        }
+
+        function displayLeaderboard(leaderboard, currentUser) {
+            const leaderboardContent = document.getElementById('leaderboardContent');
+
+            if (!leaderboardContent) return;
+
+            if (leaderboard.length === 0) {
+                leaderboardContent.innerHTML = '<div class="no-data">No scores yet. Be the first to play!</div>';
+                return;
+            }
+
+            let html = '';
+
+            // Display top 10 leaderboard
+            leaderboard.forEach(user => {
+                const isCurrentUser = currentUser && user.username === currentUser.username;
+                const rankClass = `rank-${user.rank <= 3 ? user.rank : 'other'}`;
+
+                html += `
+                    <div class="leaderboard-item ${isCurrentUser ? 'current-user' : ''}">
+                        <div class="rank ${rankClass}">${user.rank}</div>
+                        <div class="leaderboard-info">
+                            <div class="leaderboard-username">${user.username}</div>
+                            <div class="leaderboard-score">${user.score} points</div>
+                            <div class="leaderboard-level">Level ${user.level}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // If current user is not in top 10, show them separately
+            if (currentUser && !leaderboard.some(user => user.username === currentUser.username)) {
+                html += `
+                    <div class="leaderboard-separator">...</div>
+                    <div class="leaderboard-item current-user">
+                        <div class="rank rank-other">${currentUser.rank}</div>
+                        <div class="leaderboard-info">
+                            <div class="leaderboard-username">${currentUser.username} (You)</div>
+                            <div class="leaderboard-score">${currentUser.score} points</div>
+                            <div class="leaderboard-level">Level ${currentUser.level}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            leaderboardContent.innerHTML = html;
         }
     </script>
 </body>
